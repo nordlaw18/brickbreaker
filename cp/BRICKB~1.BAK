@@ -1,0 +1,156 @@
+#include <graphics.h>
+#include <conio.h>
+#include <dos.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#define MAX_BRICKS 30
+#define ROWS 5
+#define COLS 6
+
+struct Brick {
+    int x, y;
+    int width, height;
+    int visible;
+};
+
+int main() {
+    int gd = DETECT, gm;
+    initgraph(&gd, &gm, "");
+
+    // Screen dimensions
+    int screenWidth = getmaxx();
+    int screenHeight = getmaxy();
+
+    // Paddle properties
+    int paddleWidth = 100, paddleHeight = 10;
+    int paddleX = screenWidth / 2 - paddleWidth / 2;
+    int paddleY = screenHeight - 50;
+
+    // Ball properties
+    int ballX = screenWidth / 2;
+    int ballY = paddleY - 10;
+    int ballRadius = 8;
+    int ballSpeedX = 4;
+    int ballSpeedY = -4;
+
+    // Create bricks
+    Brick bricks[MAX_BRICKS];
+    int brickWidth = 80, brickHeight = 20;
+    int startX = 50, startY = 50;
+    int gap = 10;
+
+    int index = 0;
+    int i, j;  // ✅ Declare i and j here once for Turbo C++
+
+    for (i = 0; i < ROWS; i++) {
+        for (j = 0; j < COLS; j++) {
+            bricks[index].x = startX + j * (brickWidth + gap);
+            bricks[index].y = startY + i * (brickHeight + gap);
+            bricks[index].width = brickWidth;
+            bricks[index].height = brickHeight;
+            bricks[index].visible = 1;
+            index++;
+        }
+    }
+
+    int score = 0;
+    char scoreText[20];
+    int gameover = 0;
+
+    // Main Game Loop
+    while (!gameover) {
+        cleardevice();
+
+        // Draw paddle
+        setfillstyle(SOLID_FILL, BLUE);
+        bar(paddleX, paddleY, paddleX + paddleWidth, paddleY + paddleHeight);
+
+        // Draw ball
+        setfillstyle(SOLID_FILL, RED);
+        fillellipse(ballX, ballY, ballRadius, ballRadius);
+
+        // Draw bricks
+        setfillstyle(SOLID_FILL, GREEN);
+        for (i = 0; i < MAX_BRICKS; i++) {
+            if (bricks[i].visible) {
+                bar(bricks[i].x, bricks[i].y,
+                    bricks[i].x + bricks[i].width,
+                    bricks[i].y + bricks[i].height);
+            }
+        }
+
+        // Display score
+        sprintf(scoreText, "Score: %d", score);
+        setcolor(WHITE);
+        outtextxy(20, 10, scoreText);
+
+        // Ball movement
+        ballX += ballSpeedX;
+        ballY += ballSpeedY;
+
+        // Collision with walls
+        if (ballX - ballRadius <= 0 || ballX + ballRadius >= screenWidth)
+            ballSpeedX = -ballSpeedX;
+        if (ballY - ballRadius <= 0)
+            ballSpeedY = -ballSpeedY;
+
+        // Collision with paddle
+        if (ballY + ballRadius >= paddleY &&
+            ballX >= paddleX && ballX <= paddleX + paddleWidth) {
+            ballSpeedY = -ballSpeedY;
+        }
+
+        // Collision with bricks
+        for (i = 0; i < MAX_BRICKS; i++) {
+            if (bricks[i].visible) {
+                if (ballX > bricks[i].x &&
+                    ballX < bricks[i].x + bricks[i].width &&
+                    ballY - ballRadius < bricks[i].y + bricks[i].height &&
+                    ballY + ballRadius > bricks[i].y) {
+                    bricks[i].visible = 0;
+                    ballSpeedY = -ballSpeedY;
+                    score += 10;
+                }
+            }
+        }
+
+        // Game over if ball touches bottom
+        if (ballY + ballRadius > screenHeight) {
+            gameover = 1;
+        }
+
+        // Paddle movement
+        if (kbhit()) {
+            char ch = getch();
+            if (ch == 27) break; // ESC key
+            if (ch == 75 && paddleX > 0) paddleX -= 20; // Left arrow
+            if (ch == 77 && paddleX + paddleWidth < screenWidth) paddleX += 20; // Right arrow
+        }
+
+        // Win condition
+        int allDestroyed = 1;
+        for (i = 0; i < MAX_BRICKS; i++) {
+            if (bricks[i].visible) {
+                allDestroyed = 0;
+                break;
+            }
+        }
+        if (allDestroyed) {
+            gameover = 1;
+        }
+
+        delay(20);
+    }
+
+    cleardevice();
+    setcolor(WHITE);
+    settextstyle(DEFAULT_FONT, HORIZ_DIR, 2);
+    if (score == ROWS * COLS * 10)
+        outtextxy(screenWidth / 2 - 80, screenHeight / 2, "You Win!");
+    else
+        outtextxy(screenWidth / 2 - 80, screenHeight / 2, "Game Over!");
+    getch();
+    closegraph();
+    return 0;
+}

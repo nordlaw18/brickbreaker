@@ -1,0 +1,151 @@
+#include <graphics.h>
+#include <conio.h>
+#include <stdio.h>     // for sprintf()
+#include <stdlib.h>    // for rand()
+#include <dos.h>       // for delay()
+
+#define ROWS 5
+#define COLS 8
+#define BRICK_W 60
+#define BRICK_H 20
+
+int main() {
+    int gd = DETECT, gm;
+    initgraph(&gd, &gm, "C:\\TURBOC3\\BGI");
+
+    int maxx = getmaxx();
+    int maxy = getmaxy();
+
+    // Paddle
+    int paddleW = 100, paddleH = 10;
+    int paddleX = maxx / 2 - paddleW / 2;
+    int paddleY = maxy - 40;
+
+    // Ball
+    int ballX = maxx / 2;
+    int ballY = maxy / 2;
+    int ballR = 8;
+    int dx = 4, dy = -4;
+
+    // Declare loop counters here (for old Turbo C++)
+    int i, j;
+
+    // Bricks
+    int bricks[ROWS][COLS];
+    for (i = 0; i < ROWS; i++)
+        for (j = 0; j < COLS; j++)
+            bricks[i][j] = 1;
+
+    int score = 0;
+    char scoreText[50];
+
+    int gameover = 0;
+
+    while (!gameover) {
+        cleardevice();
+
+        // draw border
+        rectangle(0, 0, maxx, maxy);
+
+        // draw score
+        sprintf(scoreText, "Score: %d", score);
+        setcolor(WHITE);
+        outtextxy(10, 10, scoreText);
+
+        // draw bricks
+        for (i = 0; i < ROWS; i++) {
+            for (j = 0; j < COLS; j++) {
+                if (bricks[i][j]) {
+                    int x = j * (BRICK_W + 10) + 50;
+                    int y = i * (BRICK_H + 10) + 50;
+                    setfillstyle(SOLID_FILL, i + 1);
+                    bar(x, y, x + BRICK_W, y + BRICK_H);
+                }
+            }
+        }
+
+        // draw paddle
+        setfillstyle(SOLID_FILL, LIGHTGREEN);
+        bar(paddleX, paddleY, paddleX + paddleW, paddleY + paddleH);
+
+        // draw ball
+        setfillstyle(SOLID_FILL, RED);
+        fillellipse(ballX, ballY, ballR, ballR);
+
+        // move paddle
+        if (kbhit()) {
+            char ch = getch();
+            if (ch == 75 && paddleX > 10)           // left arrow
+                paddleX -= 15;
+            else if (ch == 77 && paddleX + paddleW < maxx - 10)  // right arrow
+                paddleX += 15;
+            else if (ch == 27)                      // ESC to quit
+                break;
+        }
+
+        // move ball
+        ballX += dx;
+        ballY += dy;
+
+        // collision with walls
+        if (ballX < ballR || ballX > maxx - ballR)
+            dx = -dx;
+        if (ballY < ballR)
+            dy = -dy;
+
+        // collision with paddle
+        if (ballY + ballR >= paddleY &&
+            ballX >= paddleX && ballX <= paddleX + paddleW) {
+            dy = -dy;
+        }
+
+        // collision with bricks
+        for (i = 0; i < ROWS; i++) {
+            for (j = 0; j < COLS; j++) {
+                if (bricks[i][j]) {
+                    int bx = j * (BRICK_W + 10) + 50;
+                    int by = i * (BRICK_H + 10) + 50;
+
+                    if (ballX > bx && ballX < bx + BRICK_W &&
+                        ballY - ballR < by + BRICK_H && ballY + ballR > by) {
+                        bricks[i][j] = 0;
+                        dy = -dy;
+                        score += 10;
+                    }
+                }
+            }
+        }
+
+        // game over conditions
+        if (ballY > maxy) {
+            gameover = 1;
+        }
+
+        // check win
+        int allCleared = 1;
+        for (i = 0; i < ROWS; i++)
+            for (j = 0; j < COLS; j++)
+                if (bricks[i][j]) allCleared = 0;
+        if (allCleared) {
+            setcolor(YELLOW);
+            outtextxy(maxx / 2 - 50, maxy / 2, "YOU WIN!");
+            delay(2000);
+            break;
+        }
+
+        delay(20);
+    }
+
+    cleardevice();
+    if (gameover) {
+        setcolor(RED);
+        outtextxy(maxx / 2 - 50, maxy / 2, "GAME OVER");
+        char finalScore[50];
+        sprintf(finalScore, "Final Score: %d", score);
+        outtextxy(maxx / 2 - 60, maxy / 2 + 30, finalScore);
+    }
+    delay(3000);
+
+    closegraph();
+    return 0;
+}
